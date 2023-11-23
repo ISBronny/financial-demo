@@ -34,6 +34,7 @@ intents:
 - nlu_fallback
 entities:
 - amount-of-money
+- list_of_accounts
 - credit_card
 - payment_date
 - vendor_name
@@ -499,6 +500,7 @@ actions:
 - validate_cc_payment_form
 - validate_transfer_money_form
 - validate_transaction_search_form
+- action_show_accounts
 forms:
   cc_payment_form:
     ignored_intents: []
