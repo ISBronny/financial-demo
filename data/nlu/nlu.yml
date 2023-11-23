@@ -357,7 +357,7 @@ nlu:
     - [Gringtos](credit_card)
 - intent: pay_cc
   examples: |
-    - I would like to pay the [minimum balance](amount-of-money) on my [embelm](credit_card) [ceh](account_type)
+    - I would like to pay the [minimum balance](amount-of-money) on my [embelm](credit_card) [card](account_type)
     - I want to pay my [credit card](account_type)
     - I want to pay my [card](account_type)
     - Pay my [card](account_type)
