@@ -650,6 +650,42 @@ class ActionShowRecipients(Action):
 
         return events
 
+class ActionShowAccounts(Action):
+    """List of the credit card accounts"""
+
+    def name(self) -> Text:
+        """Unique identifier of the action"""
+        return "action_show_accounts"
+
+    async def run(
+        self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict
+    ) -> List[EventType]:
+        """Executes the custom action"""
+        accounts = profile_db.list_credit_cards(tracker.sender_id)
+        formatted_accounts = "\n" + "\n".join(
+            [f"- {accounts.title()}" for recipient in accounts]
+        )
+        dispatcher.utter_message(
+            response="utter_accounts",
+            formatted_accounts = formatted_accounts,
+        )
+
+        events = []
+        active_form_name = tracker.active_form.get("name")
+        if active_form_name:
+            # keep the tracker clean for the predictions with form switch stories
+            events.append(UserUtteranceReverted())
+            # trigger utter_ask_{form}_AA_CONTINUE_FORM, by making it the requested_slot
+            events.append(SlotSet("AA_CONTINUE_FORM", None))
+            # # avoid that bot goes in listen mode after UserUtteranceReverted
+            events.append(FollowupAction(active_form_name))
+
+        return events
+
+
+
+
+
 
 class ActionShowTransferCharge(Action):
     """Lists the transfer charges"""
