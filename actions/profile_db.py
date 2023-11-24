@@ -249,7 +249,7 @@ class ProfileDB:
         return transactions
 
     def list_credit_cards(self, session_id: Text):
-        """List valid credit cards for an acccount"""
+        """List valid credit cards for an account"""
         account = self.get_account_from_session_id(session_id)
         cards = (
             self.session.query(CreditCard)
