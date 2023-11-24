@@ -1,0 +1,7 @@
+version: "3.1"
+nlu:
+- intent: list_of_accounts
+  examples: |
+    -list of accounts
+    -possible accounts
+    -accounts

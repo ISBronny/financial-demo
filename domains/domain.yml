@@ -34,7 +34,6 @@ intents:
 - nlu_fallback
 entities:
 - amount-of-money
-- list_of_accounts
 - credit_card
 - payment_date
 - vendor_name
@@ -463,8 +462,6 @@ responses:
   - text: Your don't owe any money on your {credit_card} credit card bill.
   utter_recipients:
   - text: These are your known recpients to whom you can send money:{formatted_recipients}
-  utter_accounts:
-    - text: These are your known accounts to whom you can send money:{formatted_accounts}
   utter_greet:
   - text: Hi! I'm your Financial Assistant!
   utter_ask_handoff:
@@ -500,7 +497,6 @@ actions:
 - validate_cc_payment_form
 - validate_transfer_money_form
 - validate_transaction_search_form
-- action_show_accounts
 forms:
   cc_payment_form:
     ignored_intents: []
