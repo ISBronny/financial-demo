@@ -663,7 +663,7 @@ class ActionShowAccounts(Action):
         """Executes the custom action"""
         accounts = profile_db.list_credit_cards(tracker.sender_id)
         formatted_accounts = "\n" + "\n".join(
-            [f"- {accounts.title()}" for recipient in accounts]
+            [f"- {account.title()}" for account in accounts]
         )
         dispatcher.utter_message(
             response="utter_accounts",
