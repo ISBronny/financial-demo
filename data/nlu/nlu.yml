@@ -397,12 +397,6 @@ nlu:
     - pay a bill
     - can I pay my [card]{"entity": "account_type", "value": "credit"}?
 
-- intent: list_of_accounts
-  examples: |
-    -list of accounts
-    -possible accounts
-    -accounts
-
 - intent: search_transactions
   examples: |
     - how much did I spend at [Target](vendor_name) this week?

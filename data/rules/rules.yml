@@ -48,11 +48,6 @@ rules:
   - intent: check_recipients
   - action: action_show_recipients
 
-- rule: Show list of known accounts
-  steps:
-  - intent: list_of_accounts
-  - action: action_show_accounts
-  
 - rule: Show balance (bank account or credit card, based on account_type)
   steps:
   - intent: check_balance
