@@ -1,0 +1,6 @@
+version: "3.1"
+rules:
+- rule: Show list of known accounts
+  steps:
+  - intent: list_of_accounts
+  - action: action_show_accounts

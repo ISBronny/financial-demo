@@ -1,0 +1,7 @@
+version: "3.1"
+stories:
+- story: say ok when user affirms after action_show_accounts
+  steps:
+  - action: action_show_accounts
+  - intent: affirm
+  - action: utter_ok
