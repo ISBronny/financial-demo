@@ -86,3 +86,83 @@ class ActionShowAccounts(Action):
             events.append(FollowupAction(active_form_name))
 
         return events
+
+class ActionShowCurrencyAccounts(Action):
+    """List of the currency accounts"""
+
+    def name(self) -> Text:
+        """Unique identifier of the action"""
+        return "action_show_currency_accounts"
+
+    async def run(
+        self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict
+    ) -> List[EventType]:
+        """Executes the custom action"""
+        accounts = profile_db.list_curr_accounts(tracker.sender_id)
+        formatted_accounts = "\n" + "\n".join(
+            [account for account in accounts]
+        )
+        dispatcher.utter_message(
+            response="utter_curr_accounts",
+            formatted_accounts = formatted_accounts,
+        )
+
+        events = []
+        active_form_name = tracker.active_form.get("name")
+        if active_form_name:
+            # keep the tracker clean for the predictions with form switch stories
+            events.append(UserUtteranceReverted())
+            # trigger utter_ask_{form}_AA_CONTINUE_FORM, by making it the requested_slot
+            events.append(SlotSet("AA_CONTINUE_FORM", None))
+            # # avoid that bot goes in listen mode after UserUtteranceReverted
+            events.append(FollowupAction(active_form_name))
+
+        return events
+
+
+class CreateCurrencyAccount(Action):
+    """Create currency account"""
+
+    def name(self) -> Text:
+        """Unique identifier of the action"""
+        return "action_create_curr_acc"
+
+    async def run(
+        self,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any],
+    ) -> List[Dict]:
+        """Executes the action"""
+
+        slots = {
+            "AA_CONTINUE_FORM": None,
+            "zz_confirm_form": None,
+            "credit_card": None,
+            "account_type": None,
+            "amount-of-money": None,
+            "time": None,
+            "time_formatted": None,
+            "start_time": None,
+            "end_time": None,
+            "start_time_formatted": None,
+            "end_time_formatted": None,
+            "grain": None,
+            "number": None,
+        }
+
+        if tracker.get_slot("zz_confirm_form") == "yes":
+            credit_card = tracker.get_slot("credit_card")
+            amount_of_money = float(tracker.get_slot("amount-of-money"))
+            amount_transferred = float(tracker.get_slot("amount_transferred"))
+            profile_db.pay_off_credit_card(
+                tracker.sender_id, credit_card, amount_of_money
+            )
+
+            dispatcher.utter_message(response="utter_cc_pay_scheduled")
+
+            slots["amount_transferred"] = amount_transferred + amount_of_money
+        else:
+            dispatcher.utter_message(response="utter_cc_pay_cancelled")
+
+        return [SlotSet(slot, value) for slot, value in slots.items()]

@@ -4,8 +4,12 @@ session_config:
   carry_over_slots_to_new_session: true
 entities:
   - list_of_accounts
+  - list_of_curr_accounts
 responses:
   utter_accounts:
     - text: These are your known accounts to whom you can send money:{formatted_accounts}
+  utter_curr_accounts:
+    - text: These are your foreign currency accounts:{formatted_accounts}
 actions:
   - action_show_accounts
+  - action_show_currency_accounts

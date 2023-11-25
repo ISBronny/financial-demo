@@ -5,3 +5,13 @@ stories:
   - action: action_show_accounts
   - intent: affirm
   - action: utter_ok
+- story: say ok when user affirms after action_show_curr_accounts
+  steps:
+  - action: action_show_currency_accounts
+  - intent: affirm
+  - action: utter_ok
+#- story: say ok when user affirms after action_currency_account
+#  steps:
+#  - action: action_currency_account
+#  - intent: affirm
+#  - action: utter_ok
