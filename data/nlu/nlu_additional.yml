@@ -5,3 +5,19 @@ nlu:
     -list of accounts
     -possible accounts
     -accounts
+- intent: list_of_curr_accounts
+  examples: |
+    -list of foreign currency accounts
+    -list of currency accounts
+    -currency account
+    -foreign currency account
+
+#- intent: create_currency_account
+#  examples: |
+#    -create a foreign currency
+#    -create a foreign currency account
+#    -new foreign currency account
+#    -create a currency
+#    -create a currency account
+#    -new currency account
+

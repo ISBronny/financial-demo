@@ -4,3 +4,12 @@ rules:
   steps:
   - intent: list_of_accounts
   - action: action_show_accounts
+
+- rule: Show list of known currency accounts
+  steps:
+  - intent: list_of_curr_accounts
+  - action: action_show_currency_accounts
+#- rule: Create a currency account
+#  steps:
+#  - intent: create_currency_account
+#  - action: action_currency_account

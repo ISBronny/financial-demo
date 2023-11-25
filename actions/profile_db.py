@@ -81,6 +81,17 @@ class RecipientRelationship(Base):
     recipient_account_id = Column(Integer)
     recipient_nickname = Column(String(255))
 
+"""Creating a table with a currency accounts"""
+class CurrencyAccount(Base):
+    """Currency accounts table. `account_id` is an `Account.id`"""
+
+    __tablename__ = "currency_account"
+    id = Column(Integer, primary_key=True)
+    account_id = Column(Integer)
+    balance = Column(REAL)
+    currency = Column(String(255))
+
+
 
 def create_database(database_engine: Engine, database_name: Text):
     """Try to connect to the database. Create it if it does not exist"""
@@ -108,6 +119,7 @@ class ProfileDB:
         CreditCard.__table__.create(self.engine, checkfirst=True)
         Transaction.__table__.create(self.engine, checkfirst=True)
         RecipientRelationship.__table__.create(self.engine, checkfirst=True)
+        CurrencyAccount.__table__.create(self.engine, checkfirst=True)
         Account.__table__.create(self.engine, checkfirst=True)
 
     def get_account(self, id: int):
@@ -478,6 +490,7 @@ class ProfileDB:
             self.add_recipients(session_id)
             self.add_transactions(session_id)
             self.add_credit_cards(session_id)
+            self.add_curr_accounts(session_id) #Pog(to find my code in file)
 
         self.session.commit()
 
@@ -494,3 +507,32 @@ class ProfileDB:
         )
         self.session.add(transaction)
         self.session.commit()
+
+
+#Adding additional function to initialize currency_account table
+
+    def add_curr_accounts(self, session_id: Text):
+        """Populate currency_account table"""
+        currencies = ['$', '€']
+        curr_accounts = [
+            CurrencyAccount(
+                currency=curr,
+                balance = self.get_account_balance(session_id)/2,
+                account_id=self.get_account_from_session_id(session_id).id,
+            )
+            for curr in currencies
+        ]
+        self.session.add_all(curr_accounts)
+
+
+    #Additional function to get a list of currency accounts
+
+    def list_curr_accounts(self, session_id: Text):
+        """List valid currency accounts"""
+        account = self.get_account_from_session_id(session_id)
+        accounts = (
+            self.session.query(CurrencyAccount)
+            .filter(CurrencyAccount.account_id == account.id)
+            .all()
+        )
+        return [f'{acc.currency} - balance: {acc.balance}' for acc in accounts]
