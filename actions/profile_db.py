@@ -536,3 +536,14 @@ class ProfileDB:
             .all()
         )
         return [f'{acc.currency} - balance: {acc.balance}' for acc in accounts]
+
+#For Yaroslav
+    def list_curr_accounts_balances(self, session_id: Text):
+        """List valid currency accounts"""
+        account = self.get_account_from_session_id(session_id)
+        accounts = (
+            self.session.query(CurrencyAccount)
+            .filter(CurrencyAccount.account_id == account.id)
+            .all()
+        )
+        return {acc.currency: acc.balance for acc in accounts}
