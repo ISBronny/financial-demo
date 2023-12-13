@@ -88,6 +88,7 @@ def parse_duckling_time(timeentity: Dict[Text, Any]) -> Optional[Dict[Text, Any]
         return parsedtime
 
 
+
 def get_entity_details(
     tracker: Tracker, entity_type: Text
 ) -> Optional[Dict[Text, Any]]:
@@ -98,6 +99,10 @@ def get_entity_details(
 
 
 def parse_duckling_currency(entity: Dict[Text, Any]) -> Optional[Dict[Text, Any]]:
+    if entity.get("entity") == 'currency':
+        currency = entity.get("value")
+        return {"currency": currency}
+
     if entity.get("entity") == "amount-of-money":
         amount = entity.get("additional_info", {}).get("value")
         currency = entity.get("additional_info", {}).get("unit")
