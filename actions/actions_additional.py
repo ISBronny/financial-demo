@@ -41,13 +41,6 @@ create_database(ENGINE, PROFILE_DB_NAME)
 
 profile_db = ProfileDB(ENGINE)
 
-NEXT_FORM_NAME = {
-    "pay_cc": "cc_payment_form",
-    "transfer_money": "transfer_money_form",
-    "search_transactions": "transaction_search_form",
-    "check_earnings": "transaction_search_form",
-}
-
 
 
 class ActionShowAccounts(Action):
@@ -161,9 +154,20 @@ class CreateCurrencyAccount(Action):
         profile_db.creat_curr_acc(tracker.sender_id, tracker.get_slot('credit_card'), tracker.get_slot("currency"))
 
         dispatcher.utter_message(f"{tracker.get_slot('currency')} for {tracker.get_slot('credit_card')} is added")
-        return [SlotSet("currency", None),SlotSet("credit_card", None)]
+        # return [SlotSet("currency", None),SlotSet("credit_card", None)]
 
 
+        events = []
+        active_form_name = tracker.active_form.get("name")
+        if active_form_name:
+            # keep the tracker clean for the predictions with form switch stories
+            events.append(UserUtteranceReverted())
+            # trigger utter_ask_{form}_AA_CONTINUE_FORM, by making it the requested_slot
+            events.append(SlotSet("AA_CONTINUE_FORM", None))
+            # # avoid that bot goes in listen mode after UserUtteranceReverted
+            events.append(FollowupAction(active_form_name))
+
+        return events
         # slots = {
         #     "AA_CONTINUE_FORM": None,
         #     "zz_confirm_form": None,
@@ -228,17 +232,17 @@ class ValidateCreateCurrencyAccount(CustomFormValidationAction):
         curr = ['cny', 'gbp', 'eur', 'usd']
         list_of_cur = profile_db.list_curr_accounts_balances(tracker.sender_id)
         card_name = tracker.get_slot('credit_card')
-        list_of_curr = [list_of_cur[1]  for i in range(len(list_of_cur)) if list_of_cur[0] == card_name]
+        list_of_curr = [list_of_cur[i][1] for i in range(len(list_of_cur)) if list_of_cur[i][0].lower() == card_name.lower()]
         entity = get_entity_details(
-            tracker, "amount-of-money"
+            tracker, "currency"
         )
-        amount_currency = parse_duckling_currency(entity)
+        amount_currency = parse_duckling_currency(entity).get('currency')
         if not amount_currency:
             return {"currency": None}
-        if amount_currency not in curr:
+        if amount_currency.lower() not in curr:
             dispatcher.utter_message("I can't understand currency you entered")
             return {"currency": None}
-        if amount_currency.lower() in curr:
+        if amount_currency in list_of_curr:
             dispatcher.utter_message(response="utter_curr_exist")
             return {"currency": None}
         else:
@@ -265,15 +269,15 @@ class ValidateCreateCurrencyAccount(CustomFormValidationAction):
 
 
 
-    async def validate_zz_confirm_form(
-        self,
-        value: Text,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any],
-    ) -> Dict[Text, Any]:
-        """Validates value of 'zz_confirm_form' slot"""
-        if value in ["yes", "no"]:
-            return {"zz_confirm_form": value}
-
-        return {"zz_confirm_form": None}
+    # async def validate_zz_confirm_form(
+    #     self,
+    #     value: Text,
+    #     dispatcher: CollectingDispatcher,
+    #     tracker: Tracker,
+    #     domain: Dict[Text, Any],
+    # ) -> Dict[Text, Any]:
+    #     """Validates value of 'zz_confirm_form' slot"""
+    #     if value in ["yes", "no"]:
+    #         return {"zz_confirm_form": value}
+    #
+    #     return {"zz_confirm_form": None}

@@ -563,7 +563,6 @@ class ProfileDB:
         self.session.commit()
 
 
-#For Yaroslav
     def list_curr_accounts_balances(self, session_id: Text):
         """List valid currency accounts"""
         acc_id = self.get_account_from_session_id(session_id).id
@@ -576,5 +575,6 @@ class ProfileDB:
                 .filter(CurrencyAccount.card_id == idd.id)
                 .all()
             )
-            accounts.append([idd.credit_card_name, acc[0].currency, acc[0].balance])
+            for i in range(len(acc)):
+                accounts.append([idd.credit_card_name, acc[i].currency, acc[i].balance])
         return accounts
