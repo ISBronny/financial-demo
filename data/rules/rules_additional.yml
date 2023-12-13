@@ -9,7 +9,28 @@ rules:
   steps:
   - intent: list_of_curr_accounts
   - action: action_show_currency_accounts
-#- rule: Create a currency account
-#  steps:
-#  - intent: create_currency_account
-#  - action: action_currency_account
+
+- rule: Show possible currencies
+  steps:
+    - intent: list_of_curr
+    - action: action_show_currencies
+
+- rule: Activate curr_create_form when no other form is active
+  condition:
+  - active_loop: null
+  steps:
+  - intent: create_currency_account
+  - action: curr_create_form
+  - active_loop: curr_create_form
+
+- rule: Submit curr_create_form while not switched from previous form
+  condition:
+  - active_loop: curr_create_form
+  - slot_was_set:
+    - previous_form_name: null
+  steps:
+  - action: curr_create_form
+  - active_loop: null
+  - slot_was_set:
+    - requested_slot: null
+  - action: action_create_curr_acc

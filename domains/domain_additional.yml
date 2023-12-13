@@ -2,14 +2,102 @@ version: "3.1"
 session_config:
   session_expiration_time: 0
   carry_over_slots_to_new_session: true
+intents:
+- create_currency_account:
+    use_entities: []
+- list_of_curr_accounts
+- list_of_accounts
+- list_of_curr
 entities:
-  - list_of_accounts
-  - list_of_curr_accounts
+- currency
 responses:
   utter_accounts:
     - text: These are your known accounts to whom you can send money:{formatted_accounts}
   utter_curr_accounts:
     - text: These are your foreign currency accounts:{formatted_accounts}
+  utter_currencies:
+    - text: These are foreign currencies our bank works with:{formatted_accounts}
+  utter_curr_acc_created:
+    - text: Successfully created {currency} account
+  utter_ask_curr_create_form_currency:
+    - text: Which currency account you would like to create?
+  utter_curr_acc_cancelled:
+    - text: Creation account canceled
+  utter_curr_exist:
+    - text: Account already exist
+  utter_ask_curr_create_form_AA_CONTINUE_FORM:
+    - buttons:
+        - payload: /affirm
+          title: Yes
+        - payload: /deny
+          title: No, cancel the creation.
+      text: Would you like to continue creating currency account?
+  utter_ask_curr_create_form_zz_confirm_form:
+    - buttons:
+        - payload: /affirm
+          title: Yes
+        - payload: /deny
+          title: No, cancel the creation.
+      text: Would you like to create {currency} account?
 actions:
   - action_show_accounts
   - action_show_currency_accounts
+  - action_show_currencies
+  - action_create_curr_acc
+  - validate_curr_create_form
+#slots:
+#  AA_CONTINUE_FORM_:
+#    type: any
+#    influence_conversation: false
+#    mappings:
+#      - intent: affirm
+#        type: from_intent
+#        value: yes
+#        conditions:
+#          - active_loop: curr_create_form
+#            requested_slot: AA_CONTINUE_FORM_
+#      - intent: deny
+#        type: from_intent
+#        value: no
+#        conditions:
+#          - active_loop: curr_create_form
+#            requested_slot: AA_CONTINUE_FORM_
+#      - intent:
+#          - inform
+#          - curr_create_form
+#        type: from_text
+#        conditions:
+#          - active_loop: curr_create_form
+#            requested_slot: AA_CONTINUE_FORM_
+#
+#  zz_confirm_form_:
+#    type: any
+#    influence_conversation: false
+#    mappings:
+#    - intent: affirm
+#      type: from_intent
+#      value: yes
+#      conditions:
+#      - active_loop: curr_create_form
+#        requested_slot: zz_confirm_form_
+#    - intent: deny
+#      type: from_intent
+#      value: no
+#      conditions:
+#      - active_loop: curr_create_form
+#        requested_slot: zz_confirm_form_
+#    - intent:
+#      - inform
+#      - curr_create_form
+#      type: from_text
+#      conditions:
+#      - active_loop: curr_create_form
+#        requested_slot: zz_confirm_form_
+
+
+forms:
+  curr_create_form:
+    ignored_intents: [ ]
+    required_slots:
+      - credit_card
+      - currency
