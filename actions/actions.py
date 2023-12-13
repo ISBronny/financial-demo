@@ -26,14 +26,12 @@ from actions.parsing import (
 )
 
 from actions.profile_db import create_database, ProfileDB
-
 from actions.custom_forms import CustomFormValidationAction
 
 
 logger = logging.getLogger(__name__)
 
-# The profile database is created/connected to when the action server starts
-# It is populated the first time `ActionSessionStart.run()` is called .
+# The profile database is created/connected to when the actd the first time `ActionSessionStart.run()` is called .
 
 PROFILE_DB_NAME = os.environ.get("PROFILE_DB_NAME", "profile")
 PROFILE_DB_URL = os.environ.get("PROFILE_DB_URL", f"sqlite:///{PROFILE_DB_NAME}.db")
@@ -272,143 +270,6 @@ class ValidatePayCCForm(CustomFormValidationAction):
             return {"zz_confirm_form": value}
 
         return {"zz_confirm_form": None}
-
-
-class ActionTransactionSearch(Action):
-    """Searches for a transaction"""
-
-    def name(self) -> Text:
-        """Unique identifier of the action"""
-        return "action_transaction_search"
-
-    async def run(
-        self,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any],
-    ) -> List[Dict]:
-        """Executes the action"""
-        slots = {
-            "AA_CONTINUE_FORM": None,
-            "zz_confirm_form": None,
-            "time": None,
-            "time_formatted": None,
-            "start_time": None,
-            "end_time": None,
-            "start_time_formatted": None,
-            "end_time_formatted": None,
-            "grain": None,
-            "search_type": None,
-            "vendor_name": None,
-        }
-
-        if tracker.get_slot("zz_confirm_form") == "yes":
-            search_type = tracker.get_slot("search_type")
-            deposit = search_type == "deposit"
-            vendor = tracker.get_slot("vendor_name")
-            vendor_name = f" at {vendor.title()}" if vendor else ""
-            start_time = parser.isoparse(tracker.get_slot("start_time"))
-            end_time = parser.isoparse(tracker.get_slot("end_time"))
-            transactions = profile_db.search_transactions(
-                tracker.sender_id,
-                start_time=start_time,
-                end_time=end_time,
-                deposit=deposit,
-                vendor=vendor,
-            )
-
-            aliased_transactions = transactions.subquery()
-            total = profile_db.session.query(
-                sa.func.sum(aliased_transactions.c.amount)
-            )[0][0]
-            if not total:
-                total = 0
-            numtransacts = transactions.count()
-            slotvars = {
-                "total": f"{total:.2f}",
-                "numtransacts": numtransacts,
-                "start_time_formatted": tracker.get_slot("start_time_formatted"),
-                "end_time_formatted": tracker.get_slot("end_time_formatted"),
-                "vendor_name": vendor_name,
-            }
-
-            dispatcher.utter_message(
-                response=f"utter_searching_{search_type}_transactions",
-                **slotvars,
-            )
-            dispatcher.utter_message(
-                response=f"utter_found_{search_type}_transactions", **slotvars
-            )
-        else:
-            dispatcher.utter_message(response="utter_transaction_search_cancelled")
-
-        return [SlotSet(slot, value) for slot, value in slots.items()]
-
-
-class ValidateTransactionSearchForm(CustomFormValidationAction):
-    """Validates Slots of the transaction_search_form"""
-
-    def name(self) -> Text:
-        """Unique identifier of the form"""
-        return "validate_transaction_search_form"
-
-    async def run(
-        self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict
-    ) -> List[EventType]:
-        """Custom validates the filled slots"""
-        events = await super().run(dispatcher, tracker, domain)
-
-        # For 'spend' type transactions we need to know the vendor_name
-        search_type = tracker.get_slot("search_type")
-        if search_type == "spend":
-            vendor_name = tracker.get_slot("vendor_name")
-            if not vendor_name:
-                events.append(SlotSet("requested_slot", "vendor_name"))
-
-        return events
-
-    async def validate_search_type(
-        self,
-        value: Text,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any],
-    ) -> Dict[Text, Any]:
-        """Validates value of 'search_type' slot"""
-        if value in ["spend", "deposit"]:
-            return {"search_type": value}
-
-        return {"search_type": None}
-
-    async def validate_vendor_name(
-        self,
-        value: Text,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any],
-    ) -> Dict[Text, Any]:
-        """Validates value of 'vendor_name' slot"""
-        if value and value.lower() in profile_db.list_vendors():
-            return {"vendor_name": value}
-
-        dispatcher.utter_message(response="utter_no_vendor_name")
-        return {"vendor_name": None}
-
-    async def validate_time(
-        self,
-        value: Text,
-        dispatcher: CollectingDispatcher,
-        tracker: Tracker,
-        domain: Dict[Text, Any],
-    ) -> Dict[Text, Any]:
-        """Validates value of 'time' slot"""
-        timeentity = get_entity_details(tracker, "time")
-        parsedinterval = timeentity and parse_duckling_time_as_interval(timeentity)
-        if not parsedinterval:
-            dispatcher.utter_message(response="utter_no_transactdate")
-            return {"time": None}
-
-        return parsedinterval
 
 
 class ActionTransferMoney(Action):
@@ -650,31 +511,6 @@ class ActionShowRecipients(Action):
 
         return events
 
-class ActionShowTransferCharge(Action):
-    """Lists the transfer charges"""
-
-    def name(self) -> Text:
-        """Unique identifier of the action"""
-        return "action_show_transfer_charge"
-
-    async def run(
-        self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict
-    ) -> List[EventType]:
-        """Executes the custom action"""
-        dispatcher.utter_message(response="utter_transfer_charge")
-
-        events = []
-        active_form_name = tracker.active_form.get("name")
-        if active_form_name:
-            # keep the tracker clean for the predictions with form switch stories
-            events.append(UserUtteranceReverted())
-            # trigger utter_ask_{form}_AA_CONTINUE_FORM, by making it the requested_slot
-            events.append(SlotSet("AA_CONTINUE_FORM", None))
-            # # avoid that bot goes in listen mode after UserUtteranceReverted
-            events.append(FollowupAction(active_form_name))
-
-        return events
-
 
 class ActionSessionStart(Action):
     """Executes at start of session"""
@@ -712,13 +548,14 @@ class ActionSessionStart(Action):
         events = [SessionStarted()]
 
         events.extend(self._slot_set_events_from_tracker(tracker))
+        logger.info(f"Current session_id: {tracker.sender_id}")
 
-        # create a mock profile by populating database with values specific to tracker.sender_id
-        profile_db.populate_profile_db(tracker.sender_id)
-        currency = profile_db.get_currency(tracker.sender_id)
+        # Create account if it does not exist.
+        account = profile_db.get_account_from_session_id(tracker.sender_id)
+        logger.info(f"Current active account: {account.id}")
 
-        # initialize slots from mock profile
-        events.append(SlotSet("currency", currency))
+        # Initialize slots from mock profile
+        events.append(SlotSet("currency", "$"))
 
         # add `action_listen` at the end
         events.append(ActionExecuted("action_listen"))
@@ -747,7 +584,7 @@ class ActionAskTransactionSearchFormConfirm(Action):
     """Asks for the 'zz_confirm_form' slot of 'transaction_search_form'
 
     A custom action is used instead of an 'utter_ask' response because a different
-    question is asked based on 'search_type' and 'vendor_name' slots.
+    question is asked based on 'search_type' and 'vendor' slots.
     """
 
     def name(self) -> Text:
@@ -758,7 +595,8 @@ class ActionAskTransactionSearchFormConfirm(Action):
     ) -> List[EventType]:
         """Executes the custom action"""
         search_type = tracker.get_slot("search_type")
-        vendor_name = tracker.get_slot("vendor_name")
+
+        vendor_name = tracker.get_slot("vendor")
         start_time_formatted = tracker.get_slot("start_time_formatted")
         end_time_formatted = tracker.get_slot("end_time_formatted")
 

@@ -20,9 +20,3 @@ stories:
   - intent: affirm
   - action: utter_ok
 
-
-- story: say ok when user affirms after action_show_transfer_charge
-  steps:
-  - action: action_show_transfer_charge
-  - intent: affirm
-  - action: utter_ok
