@@ -11,13 +11,70 @@ nlu:
     -list of currency accounts
     -currency account
     -foreign currency account
+- intent: list_of_curr
+  examples: |
+    - currencies
+    - currency
+    - list of currencies
+    - foreign currency 
+    - foreign currencies
+    - possible currency
+    - possible currencies
 
-#- intent: create_currency_account
+- intent: create_currency_account
+  examples: |
+    -create a [USD](currency) account on [iron bank](credit_card)
+    -create a [EUR](currency) account on [iron bank](credit_card)
+    -create a [CNY](currency) account on [iron bank](credit_card)
+    -create a [GBP](currency) account on [iron bank](credit_card)
+    -create a [USD](currency) account on [credit all](credit_card)
+    -create a [EUR](currency) account on [credit all](credit_card)
+    -create a [CNY](currency) account on [credit all](credit_card)
+    -create a [GBP](currency) account on [credit all](credit_card)
+    -create a [USD](currency) account on [emblem](credit_card)
+    -create a [EUR](currency) account on [emblem](credit_card)
+    -create a [CNY](currency) account on [justice bank](credit_card)
+    -create a [GBP](currency) account on [justice bank](credit_card)
+    -[USD](currency) account on [iron bank](credit_card)
+    -[EUR](currency) account on [iron bank](credit_card)
+    -[CNY](currency) account on [iron bank](credit_card)
+    -[GBP](currency) account on [iron bank](credit_card)
+    -[USD](currency) account on [credit all](credit_card)
+    -[EUR](currency) account on [credit all](credit_card)
+    -[CNY](currency) account on [credit all](credit_card)
+    -[GBP](currency) account on [credit all](credit_card)
+    -[USD](currency) account on [emblem](credit_card)
+    -[EUR](currency) account on [emblem](credit_card)
+    -[CNY](currency) account on [justice bank](credit_card)
+    -[GBP](currency) account on [justice bank](credit_card)
+    -On [justice bank](credit_card) create [CNY](currency) account
+    -On [justice bank](credit_card) create [USD](currency) account
+    -On [emblem](credit_card) create [CNY](currency) account
+    -On [emblem](credit_card) create [GBP](currency) account
+    -On [credit all](credit_card) create [GBP](currency) account
+    -On [credit all](credit_card) create [GBP](currency) account
+    -On [iron bank](credit_card) create [USD](currency) account
+    -On [iron bank](credit_card) create [EUR](currency) account
+    -On [iron bank](credit_card) create [CNY](currency) account
+    -On [iron bank](credit_card) create [USD](currency) account
+    -On [iron bank](credit_card) create [CNY](currency) account
+
+#
+#- intent: curr
 #  examples: |
-#    -create a foreign currency
-#    -create a foreign currency account
-#    -new foreign currency account
-#    -create a currency
-#    -create a currency account
-#    -new currency account
-
+#    -Pounds
+#    -Pound
+#    -Yuan
+#    -Yuans
+#    -Euros
+#    -Euro
+#    -Us Dollar
+#    -Dollar
+#    -CNY
+#    -GBP
+#    -EUR
+#    -USD
+#    -¥
+#    -£
+#    -€
+#    -$

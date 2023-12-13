@@ -1,6 +1,6 @@
 import os
 import sqlalchemy as sa
-from sqlalchemy import Column, Integer, String, DateTime, REAL
+from sqlalchemy import Column, Integer, String, DateTime, REAL, ForeignKey
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.engine.base import Engine
@@ -10,6 +10,7 @@ from random import choice, randrange, sample, randint
 from numpy import arange
 from datetime import datetime, timedelta
 import pytz
+
 
 utc = pytz.UTC
 
@@ -83,11 +84,11 @@ class RecipientRelationship(Base):
 
 """Creating a table with a currency accounts"""
 class CurrencyAccount(Base):
-    """Currency accounts table. `account_id` is an `Account.id`"""
+    """Currency accounts table. `card_id` is an `creditcards.id`"""
 
     __tablename__ = "currency_account"
     id = Column(Integer, primary_key=True)
-    account_id = Column(Integer)
+    card_id = Column(Integer)
     balance = Column(REAL)
     currency = Column(String(255))
 
@@ -513,37 +514,67 @@ class ProfileDB:
 
     def add_curr_accounts(self, session_id: Text):
         """Populate currency_account table"""
-        currencies = ['$', '€']
+        cards = (self.session.query(CreditCard)
+                 .filter(CreditCard.account_id == self.get_account_from_session_id(session_id).id)
+                 .all())
         curr_accounts = [
             CurrencyAccount(
-                currency=curr,
-                balance = self.get_account_balance(session_id)/2,
-                account_id=self.get_account_from_session_id(session_id).id,
+                card_id = card.id,
+                currency = 'USD',
+                balance = 0,
             )
-            for curr in currencies
+            for card in cards
         ]
         self.session.add_all(curr_accounts)
 
 
     #Additional function to get a list of currency accounts
 
-    def list_curr_accounts(self, session_id: Text):
-        """List valid currency accounts"""
-        account = self.get_account_from_session_id(session_id)
-        accounts = (
-            self.session.query(CurrencyAccount)
-            .filter(CurrencyAccount.account_id == account.id)
-            .all()
+
+    def list_curr(self, session_id: Text):
+        """Returns list of possible for. currencies"""
+        return {'Yuan': 'CNY(¥)', 'Pound': 'GBP(£)', 'Euro': 'EUR(€)', 'US dollar': 'USD($)'}
+
+
+    def transact_curr_account(
+        self, card_id: Integer, currency: Text
+    ):
+        """Add a currency account to the currency_account table"""
+
+        curr_acc = CurrencyAccount(
+            card_id = card_id,
+            currency = currency,
+            balance = 0
         )
-        return [f'{acc.currency} - balance: {acc.balance}' for acc in accounts]
+        self.session.add(curr_acc)
+        self.session.commit()
+
+    def creat_curr_acc(
+        self, session_id: Text, card_name: Text, currency: Text):
+
+        account_id = self.get_account_from_session_id(session_id)
+        card_id = (self.session.query(CreditCard)
+                   .filter(account_id.id == CreditCard.account_id)
+                   .filter(card_name.lower() == CreditCard.credit_card_name).all())
+        self.transact_curr_account(
+            card_id[0].id,
+            currency,
+        )
+        self.session.commit()
+
 
 #For Yaroslav
     def list_curr_accounts_balances(self, session_id: Text):
         """List valid currency accounts"""
-        account = self.get_account_from_session_id(session_id)
-        accounts = (
-            self.session.query(CurrencyAccount)
-            .filter(CurrencyAccount.account_id == account.id)
-            .all()
-        )
-        return {acc.currency: acc.balance for acc in accounts}
+        acc_id = self.get_account_from_session_id(session_id).id
+        cards_ids = (self.session.query(CreditCard)
+                     .filter(CreditCard.account_id == acc_id).all())
+        accounts = []
+        for idd in cards_ids:
+            acc = (
+                self.session.query(CurrencyAccount)
+                .filter(CurrencyAccount.card_id == idd.id)
+                .all()
+            )
+            accounts.append([idd.credit_card_name, acc[0].currency, acc[0].balance])
+        return accounts

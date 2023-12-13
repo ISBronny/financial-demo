@@ -58,6 +58,9 @@ slots:
         requested_slot: AA_CONTINUE_FORM
       - active_loop: transaction_search_form
         requested_slot: AA_CONTINUE_FORM
+      #ppp
+#      - active_loop: curr_create_form
+#        requested_slot: AA_CONTINUE_FORM
     - intent: deny
       type: from_intent
       value: no
@@ -68,6 +71,9 @@ slots:
         requested_slot: AA_CONTINUE_FORM
       - active_loop: transaction_search_form
         requested_slot: AA_CONTINUE_FORM
+      #ppp
+#      - active_loop: curr_create_form
+#        requested_slot: AA_CONTINUE_FORM
     - intent:
       - inform
       - cc_payment_form
@@ -89,6 +95,14 @@ slots:
       conditions:
       - active_loop: transaction_search_form
         requested_slot: AA_CONTINUE_FORM
+    #ppp
+#    - intent:
+#      - inform
+#      - curr_create_form
+#      type: from_text
+#      conditions:
+#      - active_loop: curr_create_form
+#        requested_slot: AA_CONTINUE_FORM
   PERSON:
     type: any
     influence_conversation: false
@@ -168,6 +182,8 @@ slots:
       conditions:
       - active_loop: cc_payment_form
         requested_slot: credit_card
+      - active_loop: curr_create_form
+        requested_slot: credit_card
     - intent:
       - inform
       - cc_payment_form
@@ -177,12 +193,40 @@ slots:
         requested_slot: credit_card
     - type: from_entity
       entity: credit_card
+    - intent:
+        - inform
+        - curr_create_form
+      type: from_text
+      conditions:
+        - active_loop: curr_create_form
+          requested_slot: credit_card
+    - type: from_entity
+      entity: credit_card
   currency:
     type: any
     influence_conversation: false
     initial_value: $
     mappings:
-    - type: custom
+      - entity: currency
+        type: from_entity
+        conditions:
+          - active_loop: curr_create_form
+            requested_slot: credit_card
+      - intent:
+          - inform
+          - currency
+        type: from_text
+      - type: from_entity
+        entity: currency
+      - intent:
+          - inform
+          - curr_create_form
+        type: from_text
+        conditions:
+          - active_loop: curr_create_form
+            requested_slot: currency
+      - type: from_entity
+        entity: currency
   end_time:
     type: any
     influence_conversation: false
@@ -314,6 +358,10 @@ slots:
         requested_slot: zz_confirm_form
       - active_loop: transaction_search_form
         requested_slot: zz_confirm_form
+        # ppp
+#      - active_loop: curr_create_form
+#        requested_slot: zz_confirm_form
+
     - intent: deny
       type: from_intent
       value: no
@@ -345,6 +393,14 @@ slots:
       conditions:
       - active_loop: transaction_search_form
         requested_slot: zz_confirm_form
+    #ppp
+#    - intent:
+#      - inform
+#      - curr_create_form
+#      type: from_text
+#      conditions:
+#      - active_loop: curr_create_form
+#        requested_slot: zz_confirm_form
 responses:
   utter_out_of_scope:
   - text: Sorry, I'm not sure how to respond to that. Type "help" for assistance.

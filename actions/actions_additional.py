@@ -48,11 +48,6 @@ NEXT_FORM_NAME = {
     "check_earnings": "transaction_search_form",
 }
 
-FORM_DESCRIPTION = {
-    "cc_payment_form": "credit card payment",
-    "transfer_money_form": "money transfer",
-    "transaction_search_form": "transaction search",
-}
 
 
 class ActionShowAccounts(Action):
@@ -98,13 +93,42 @@ class ActionShowCurrencyAccounts(Action):
         self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict
     ) -> List[EventType]:
         """Executes the custom action"""
-        accounts = profile_db.list_curr_accounts(tracker.sender_id)
-        formatted_accounts = "\n" + "\n".join(
-            [account for account in accounts]
-        )
+        curr = profile_db.list_curr_accounts_balances(tracker.sender_id)
+        formatted_curr = "\n" + "\n".join(
+            [f"Card:{cur[0]}, currency: {cur[1]}, balance: {cur[2]}" for cur in curr])
         dispatcher.utter_message(
             response="utter_curr_accounts",
-            formatted_accounts = formatted_accounts,
+            formatted_accounts = formatted_curr,
+        )
+
+        events = []
+        active_form_name = tracker.active_form.get("name")
+        if active_form_name:
+            # keep the tracker clean for the predictions with form switch stories
+            events.append(UserUtteranceReverted())
+            # trigger utter_ask_{form}_AA_CONTINUE_FORM, by making it the requested_slot
+            events.append(SlotSet("AA_CONTINUE_FORM", None))
+            # # avoid that bot goes in listen mode after UserUtteranceReverted
+            events.append(FollowupAction(active_form_name))
+
+        return events
+
+
+class ActionShowCurrencies(Action):
+
+    def name(self) -> Text:
+        return "action_show_currencies"
+
+    async def run(
+        self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict
+    ) -> List[EventType]:
+        curr = profile_db.list_curr(tracker.sender_id)
+        formatted_curr = "\n" + "\n".join(
+            [f"{cur} - {curr[cur]}" for cur in curr.keys()]
+        )
+        dispatcher.utter_message(
+            response="utter_currencies",
+            formatted_accounts = formatted_curr,
         )
 
         events = []
@@ -134,35 +158,122 @@ class CreateCurrencyAccount(Action):
         domain: Dict[Text, Any],
     ) -> List[Dict]:
         """Executes the action"""
+        profile_db.creat_curr_acc(tracker.sender_id, tracker.get_slot('credit_card'), tracker.get_slot("currency"))
 
-        slots = {
-            "AA_CONTINUE_FORM": None,
-            "zz_confirm_form": None,
-            "credit_card": None,
-            "account_type": None,
-            "amount-of-money": None,
-            "time": None,
-            "time_formatted": None,
-            "start_time": None,
-            "end_time": None,
-            "start_time_formatted": None,
-            "end_time_formatted": None,
-            "grain": None,
-            "number": None,
-        }
+        dispatcher.utter_message(f"{tracker.get_slot('currency')} for {tracker.get_slot('credit_card')} is added")
+        return [SlotSet("currency", None),SlotSet("credit_card", None)]
 
-        if tracker.get_slot("zz_confirm_form") == "yes":
-            credit_card = tracker.get_slot("credit_card")
-            amount_of_money = float(tracker.get_slot("amount-of-money"))
-            amount_transferred = float(tracker.get_slot("amount_transferred"))
-            profile_db.pay_off_credit_card(
-                tracker.sender_id, credit_card, amount_of_money
-            )
 
-            dispatcher.utter_message(response="utter_cc_pay_scheduled")
+        # slots = {
+        #     "AA_CONTINUE_FORM": None,
+        #     "zz_confirm_form": None,
+        #     "currency": None,
+        #     "account_type": None,
+        #     "amount-of-money": None,
+        #     "time": None,
+        #     "time_formatted": None,
+        #     "start_time": None,
+        #     "end_time": None,
+        #     "start_time_formatted": None,
+        #     "end_time_formatted": None,
+        #     "grain": None,
+        #     "number": None,
+        # }
+        #
+        # if tracker.get_slot("zz_confirm_form") == "yes":
+        #     currency = tracker.get_slot("currency")
+        #     profile_db.creat_curr_acc(
+        #         tracker.sender_id, currency
+        #     )
+        #
+        #     dispatcher.utter_message(response="utter_curr_acc_created", currency = currency)
+        #
+        #     slots["currency"] = currency
+        # else:
+        #     dispatcher.utter_message(response="utter_curr_acc_canceled")
+        #
+        # return [SlotSet(slot, value) for slot, value in slots.items()]
 
-            slots["amount_transferred"] = amount_transferred + amount_of_money
+class ValidateCreateCurrencyAccount(CustomFormValidationAction):
+    """Validates Slots of the curr_create_form"""
+
+    def name(self) -> Text:
+        """Unique identifier of the action"""
+        return "validate_curr_create_form"
+
+
+
+    async def validate_credit_card(
+        self,
+        value: Text,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any],
+    ) -> Dict[Text, Any]:
+        """Validates value of 'credit_card' slot"""
+        if value and value.lower() in profile_db.list_credit_cards(tracker.sender_id):
+            credit_card_slot = {"credit_card": value.title()}
+            return credit_card_slot
+        dispatcher.utter_message(response="utter_no_creditcard")
+        return {"credit_card": None}
+
+    async def validate_currency(
+        self,
+        value: Text,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any],
+    ) -> Dict[Text, Any]:
+        """Validates value of 'currency' slot"""
+        curr = ['cny', 'gbp', 'eur', 'usd']
+        list_of_cur = profile_db.list_curr_accounts_balances(tracker.sender_id)
+        card_name = tracker.get_slot('credit_card')
+        list_of_curr = [list_of_cur[1]  for i in range(len(list_of_cur)) if list_of_cur[0] == card_name]
+        entity = get_entity_details(
+            tracker, "amount-of-money"
+        )
+        amount_currency = parse_duckling_currency(entity)
+        if not amount_currency:
+            return {"currency": None}
+        if amount_currency not in curr:
+            dispatcher.utter_message("I can't understand currency you entered")
+            return {"currency": None}
+        if amount_currency.lower() in curr:
+            dispatcher.utter_message(response="utter_curr_exist")
+            return {"currency": None}
         else:
-            dispatcher.utter_message(response="utter_cc_pay_cancelled")
+            return SlotSet("currency", amount_currency)
 
-        return [SlotSet(slot, value) for slot, value in slots.items()]
+
+
+        # try:
+        #     entity = get_entity_details(
+        #         tracker, "amount-of-money"
+        #     ) or get_entity_details(tracker, "number")
+        #     amount_currency = parse_duckling_currency(entity)
+        #     if not amount_currency:
+        #         raise TypeError
+        #     if account_balance < float(amount_currency.get("amount-of-money")):
+        #         dispatcher.utter_message(response="utter_insufficient_funds")
+        #         return {"amount-of-money": None}
+        #     return amount_currency
+        # except (TypeError, AttributeError):
+        #     pass
+
+        # dispatcher.utter_message(response="utter_no_payment_amount")
+        # return {"amount-of-money": None}
+
+
+
+    async def validate_zz_confirm_form(
+        self,
+        value: Text,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any],
+    ) -> Dict[Text, Any]:
+        """Validates value of 'zz_confirm_form' slot"""
+        if value in ["yes", "no"]:
+            return {"zz_confirm_form": value}
+
+        return {"zz_confirm_form": None}
