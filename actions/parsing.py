@@ -88,6 +88,7 @@ def parse_duckling_time(timeentity: Dict[Text, Any]) -> Optional[Dict[Text, Any]
         return parsedtime
 
 
+
 def get_entity_details(
     tracker: Tracker, entity_type: Text
 ) -> Optional[Dict[Text, Any]]:

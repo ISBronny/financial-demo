@@ -563,6 +563,7 @@ class ProfileDB:
         self.session.commit()
 
 
+
     def list_curr_accounts_balances(self, session_id: Text):
         """List valid currency accounts"""
         acc_id = self.get_account_from_session_id(session_id).id
