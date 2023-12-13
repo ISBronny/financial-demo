@@ -42,7 +42,7 @@ rules:
   steps:
   - intent: check_recipients
   - action: action_show_recipients
-  
+
 - rule: Show balance (bank account or credit card, based on account_type)
   steps:
   - intent: check_balance

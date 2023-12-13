@@ -16,7 +16,7 @@ from actions.database.tables.accountrelationship import RecipientRelationship
 from actions.database.tables.creditcard import CreditCard
 from actions.database.tables.transaction.offline import OfflineTransaction
 from actions.database.tables.transaction.online import Transaction
-
+from action.database.tables.creditcard import CreditCard
 
 utc = pytz.UTC
 logger = logging.getLogger(__name__)
@@ -38,6 +38,16 @@ GENERAL_ACCOUNTS = {
 
 ACCOUNT_NUMBER_LENGTH = 12
 CREDIT_CARD_NUMBER_LENGTH = 14
+
+
+class CurrencyAccount(Base):
+    """Currency accounts table. `card_id` is an `creditcards.id`"""
+
+    __tablename__ = "currency_account"
+    id = Column(Integer, primary_key=True)
+    card_id = Column(Integer)
+    balance = Column(REAL)
+    currency = Column(String(255))
 
 
 def create_database(database_engine: Engine, database_name: Text):
@@ -75,6 +85,8 @@ class ProfileDB:
         RecipientRelationship.__table__.create(self.engine, checkfirst=True)
         logger.info("RecipientRelationship created...")
         logger.info("Tables created!")
+        CurrencyAccount.__table__.create(self.engine, checkfirst=True)
+        Account.__table__.create(self.engine, checkfirst=True)
 
     def get_account(self, id: int):
         """Get an `Account` object based on an `Account.id`"""
@@ -220,7 +232,7 @@ class ProfileDB:
         return transactions
 
     def list_credit_cards(self, session_id: Text):
-        """List valid credit cards for an acccount"""
+        """List valid credit cards for an account"""
         account = self.get_account_from_session_id(session_id)
         cards = (
             self.session.query(CreditCard)
@@ -258,6 +270,15 @@ class ProfileDB:
             for name in CreditCard.__table__.columns.keys()
             if name.endswith("balance")
         ]
+
+    def list_vendors(self):
+        """List valid vendors"""
+        vendors = (
+            self.session.query(Account.account_holder_name)
+            .filter(Account.session_id.startswith("vendor_"))
+            .all()
+        )
+        return [vendor.account_holder_name for vendor in vendors]
 
     def pay_off_credit_card(
         self, session_id: Text, credit_card_name: Text, amount: float
@@ -333,6 +354,94 @@ class ProfileDB:
         ]
         self.session.add_all(relationships)
 
+    def add_transactions(self, session_id: Text):
+        """Populate transactions table for a session ID with random transactions"""
+        account_number = self.get_account_number(
+            self.get_account_from_session_id(session_id)
+        )
+        vendors = (
+            self.session.query(Account)
+            .filter(Account.session_id.startswith("vendor_"))
+            .all()
+        )
+        depositors = (
+            self.session.query(Account)
+            .filter(Account.session_id.startswith("depositor_"))
+            .all()
+        )
+
+        start_date = utc.localize(datetime(2019, 1, 1))
+        end_date = utc.localize(datetime.now())
+        number_of_days = (end_date - start_date).days
+
+        for vendor in vendors:
+            rand_spend_amounts = sample(
+                [round(amount, 2) for amount in list(arange(5, 50, 0.01))],
+                number_of_days // 2,
+            )
+
+            rand_dates = [
+                (start_date + timedelta(days=randrange(number_of_days)))
+                for x in range(0, len(rand_spend_amounts))
+            ]
+
+            spend_transactions = [
+                Transaction(
+                    from_account_number=account_number,
+                    to_account_number=self.get_account_number(vendor),
+                    amount=amount,
+                    timestamp=date,
+                )
+                for amount, date in zip(rand_spend_amounts, rand_dates)
+            ]
+
+            self.session.add_all(spend_transactions)
+
+        for depositor in depositors:
+            if depositor.account_holder_name == "interest":
+                rand_deposit_amounts = sample(
+                    [round(amount, 2) for amount in list(arange(5, 20, 0.01))],
+                    number_of_days // 30,
+                )
+            else:
+                rand_deposit_amounts = sample(
+                    [round(amount, 2) for amount in list(arange(1000, 2000, 0.01))],
+                    number_of_days // 14,
+                )
+
+            rand_dates = [
+                (start_date + timedelta(days=randrange(number_of_days)))
+                for x in range(0, len(rand_deposit_amounts))
+            ]
+
+            deposit_transactions = [
+                Transaction(
+                    from_account_number=self.get_account_number(depositor),
+                    to_account_number=account_number,
+                    amount=amount,
+                    timestamp=date,
+                )
+                for amount, date in zip(rand_deposit_amounts, rand_dates)
+            ]
+
+            self.session.add_all(deposit_transactions)
+
+    def populate_profile_db(self, session_id: Text):
+        """Initialize the database for a conversation session.
+        Will populate all tables with sample values.
+        If general accounts have already been populated, it will only
+        add account-holder-specific values to tables.
+        """
+        if not self.check_general_accounts_populated(GENERAL_ACCOUNTS):
+            self.add_general_accounts(GENERAL_ACCOUNTS)
+        if not self.check_session_id_exists(session_id):
+            self.add_session_account(session_id)
+            self.add_recipients(session_id)
+            self.add_transactions(session_id)
+            self.add_credit_cards(session_id)
+
+        self.session.commit()
+
     def transact(
         self, from_account_number: Text, to_account_number: Text, amount: float
     ):
@@ -393,3 +502,71 @@ class ProfileDB:
 
         self.session.add(transac)
         self.session.commit()
+
+    def add_curr_accounts(self, session_id: Text):
+        """Populate currency_account table"""
+        cards = (
+            self.session.query(CreditCard)
+            .filter(
+                CreditCard.account_id == self.get_account_from_session_id(session_id).id
+            )
+            .all()
+        )
+        curr_accounts = [
+            CurrencyAccount(
+                card_id=card.id,
+                currency="USD",
+                balance=0,
+            )
+            for card in cards
+        ]
+        self.session.add_all(curr_accounts)
+
+    # Additional function to get a list of currency accounts
+
+    def list_curr(self, session_id: Text):
+        """Returns list of possible for. currencies"""
+        return {
+            "Yuan": "CNY(¥)",
+            "Pound": "GBP(£)",
+            "Euro": "EUR(€)",
+            "US dollar": "USD($)",
+        }
+
+    def transact_curr_account(self, card_id: Integer, currency: Text):
+        """Add a currency account to the currency_account table"""
+
+        curr_acc = CurrencyAccount(card_id=card_id, currency=currency, balance=0)
+        self.session.add(curr_acc)
+        self.session.commit()
+
+    def creat_curr_acc(self, session_id: Text, card_name: Text, currency: Text):
+        account_id = self.get_account_from_session_id(session_id)
+        card_id = (
+            self.session.query(CreditCard)
+            .filter(account_id.id == CreditCard.account_id)
+            .filter(card_name.lower() == CreditCard.credit_card_name)
+            .all()
+        )
+        self.transact_curr_account(
+            card_id[0].id,
+            currency,
+        )
+        self.session.commit()
+
+    # For Yaroslav
+    def list_curr_accounts_balances(self, session_id: Text):
+        """List valid currency accounts"""
+        acc_id = self.get_account_from_session_id(session_id).id
+        cards_ids = (
+            self.session.query(CreditCard).filter(CreditCard.account_id == acc_id).all()
+        )
+        accounts = []
+        for idd in cards_ids:
+            acc = (
+                self.session.query(CurrencyAccount)
+                .filter(CurrencyAccount.card_id == idd.id)
+                .all()
+            )
+            accounts.append([idd.credit_card_name, acc[0].currency, acc[0].balance])
+        return accounts

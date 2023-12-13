@@ -19,10 +19,6 @@ class ActionAddOfflineTransaction(Action):
     async def run(
         self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: DomainDict
     ) -> List[Dict[Text, Any]]:
-        # logger.info(f'{tracker.__dict__["latest_message"]["entities"]}')
-        # logger.info(f'Money: {tracker.get_slot("amount-of-money")}')
-        # logger.info(f'Time: {tracker.get_slot("time")}')
-        # logger.info(f'Vendor: {tracker.get_slot("vendor")}')
         ant = None
 
         for entity in tracker.latest_message.get("entities"):

@@ -290,7 +290,7 @@ class ActionTransferMoney(Action):
             "amount-of-money": None,
             "number": None,
         }
-        # Todo: user-contacts
+
         if tracker.get_slot("zz_confirm_form") == "yes":
             amount_of_money = float(tracker.get_slot("amount-of-money"))
             from_account_number = profile_db.get_account_number(

@@ -368,6 +368,7 @@ nlu:
     - i wanna pay my [credit card]{"entity": "account_type", "value": "credit"}
     - pay a bill
     - can I pay my [card]{"entity": "account_type", "value": "credit"}?
+
 - intent: search_transactions
   examples: |
     - how much did I spend at [Target](vendor) this week?
